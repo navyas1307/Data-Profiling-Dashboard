@@ -1,6 +1,6 @@
 # Data Analysis Dashboard
 
-A full-stack web application for automated data cleaning, profiling, visualization, outlier detection, clustering, and insights generation.
+A web application for automated data cleaning, profiling, visualization, outlier detection, clustering, and insights generation.
 
 Built using Flask, Plotly.js, Bootstrap 5, and Vanilla JavaScript.
 
