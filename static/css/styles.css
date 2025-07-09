@@ -1,4 +1,3 @@
-
 /* Enhanced Data Analysis Dashboard - Modern Corporate Theme 2.0 */
 :root {
     /* Updated Color Palette */
@@ -21,67 +20,6 @@
     --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
     --card-shadow-hover: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
     --hover-transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-}
-/* styles.css - Visualization Grid Adjustments */
-.visualization-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-    gap: 1.5rem;
-    width: 100%;
-}
-
-.chart-card {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
-
-/* Ensure Plotly charts fill their containers */
-.visualization-container {
-    width: 100% !important;
-    height: 100% !important;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-/* Specific size classes for grid layout */
-.chart-full {
-    grid-column: 1 / -1;
-}
-
-.chart-large {
-    grid-column: span 2;
-}
-
-.chart-medium {
-    grid-column: span 2;
-}
-
-.chart-small {
-    grid-column: span 1;
-}
-
-@media (max-width: 1200px) {
-    .visualization-grid {
-        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    }
-    .chart-large, .chart-medium, .chart-small {
-        grid-column: span 1;
-    }
-}
-
-/* Card body adjustments */
-.visualization-card .card-body {
-    padding: 1rem !important;
-    height: 400px;
-}
-
-/* Plotly chart wrapper */
-.js-plotly-plot {
-    width: 100% !important;
-    height: 100% !important;
 }
 
 body {
@@ -155,11 +93,60 @@ header .navbar {
 /* Visualization Grid Layout */
 .visualization-grid {
     display: grid;
-    grid-template-columns: repeat(12, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
     gap: 1.5rem;
+    width: 100%;
 }
 
-/* Different chart size options */
+/* Chart size classes */
+.chart-full {
+    grid-column: 1 / -1;
+}
+
+.chart-large {
+    grid-column: span 2;
+}
+
+.chart-medium {
+    grid-column: span 2;
+}
+
+.chart-small {
+    grid-column: span 1;
+}
+
+/* Responsive grid adjustments */
+@media (max-width: 1200px) {
+    .visualization-grid {
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    }
+    
+    .chart-large, .chart-medium, .chart-small {
+        grid-column: span 1;
+    }
+}
+
+@media (max-width: 768px) {
+    .visualization-grid {
+        gap: 1rem;
+    }
+}
+
+/* Chart card styling */
+.chart-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.chart-card .card-body {
+    flex: 1;
+    padding: 0.75rem;
+    overflow: hidden;
+}
+
+/* Chart container styling */
 .chart-container {
     width: 100%;
     height: 100%;
@@ -168,48 +155,22 @@ header .navbar {
     flex-direction: column;
 }
 
-.chart-full {
-    grid-column: span 12;
+.chart-wrapper {
+    width: 100%;
+    height: 100%;
+    min-height: 250px;
+    position: relative;
+    overflow: hidden;
 }
 
-.chart-large {
-    grid-column: span 8;
+/* Visualization containers */
+.visualization-container {
+    width: 100%;
+    flex: 1;
+    position: relative;
+    overflow: hidden;
 }
 
-.chart-medium {
-    grid-column: span 6;
-}
-
-.chart-small {
-    grid-column: span 4;
-}
-
-/* Responsive grid adjustments */
-@media (max-width: 1200px) {
-    .chart-large {
-        grid-column: span 12;
-    }
-    
-    .chart-medium {
-        grid-column: span 6;
-    }
-    
-    .chart-small {
-        grid-column: span 6;
-    }
-}
-
-@media (max-width: 768px) {
-    .visualization-grid {
-        gap: 1rem;
-    }
-    
-    .chart-medium, .chart-small {
-        grid-column: span 12;
-    }
-}
-
-/* Enhanced Visualization cards */
 .visualization-card {
     height: 100%;
     display: flex;
@@ -229,10 +190,36 @@ header .navbar {
     justify-content: center;
 }
 
-.visualization-container {
-    width: 100%;
-    flex: 1;
+/* Plotly specific styling */
+.js-plotly-plot {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.plotly-chart {
+    width: 100% !important;
+    height: 400px !important;
+    padding-top: 10px;
+    box-sizing: border-box;
     position: relative;
+}
+
+.js-plotly-plot .g-title {
+    font-family: inherit !important;
+    font-size: 16px !important;
+    margin-top: 10px !important;
+    margin-bottom: 10px !important;
+    text-align: center !important;
+    width: 100% !important;
+}
+
+.plotly-chart .modebar {
+    top: 5px !important;
+    right: 10px !important;
+}
+
+.js-plotly-plot, .plot-container, .plotly, .main-svg {
+    max-width: 100% !important;
 }
 
 /* Button styles */
@@ -326,25 +313,6 @@ header .navbar {
 
 .stat-subtitle i {
     margin-right: 5px;
-}
-
-/* Chart cards with responsive handling */
-.chart-card {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-}
-
-.chart-card .card-body {
-    flex: 1;
-    padding: 0.75rem;
-    overflow: hidden;
-}
-
-.chart-wrapper {
-    width: 100%;
-    height: 100%;
-    min-height: 250px;
 }
 
 /* Tool buttons */
@@ -528,4 +496,17 @@ footer p {
     color: var(--text-muted);
     font-size: 0.9rem;
     margin-bottom: 0;
+}
+
+/* Responsive adjustments for charts */
+@media (max-width: 768px) {
+    .plotly-chart {
+        height: 350px;
+        padding-top: 10px;
+    }
+    
+    .js-plotly-plot .g-title {
+        font-size: 14px !important;
+        margin-top: 10px !important;
+    }
 }
