@@ -559,7 +559,8 @@ def generate_visualizations(df):
                 )
                 
                 try:
-                    fig_json = json.dumps(fig.to_dict())
+                    json.dumps(fig.to_dict(), cls=CustomJSONEncoder)
+
                     visualizations.append({
                         'title': f'Distribution of {col}',
                         'type': 'histogram',
@@ -613,7 +614,8 @@ def generate_visualizations(df):
                 fig.update_layout(**base_layout)
                 
                 try:
-                    fig_json = json.dumps(fig.to_dict())
+                    json.dumps(fig.to_dict(), cls=CustomJSONEncoder)
+
                     visualizations.append({
                         'title': f'Distribution of {col}',
                         'type': 'horizontal_bar',
@@ -661,7 +663,8 @@ def generate_visualizations(df):
                 fig.update_layout(**base_layout)
                 
                 try:
-                    fig_json = json.dumps(fig.to_dict())
+                    json.dumps(fig.to_dict(), cls=CustomJSONEncoder)
+
                     visualizations.append({
                         'title': f'Top Values in {col}',
                         'type': 'pie',
@@ -756,7 +759,8 @@ def generate_visualizations(df):
                     fig.update_layout(**base_layout)
                     
                     try:
-                        fig_json = json.dumps(fig.to_dict())
+                        json.dumps(fig.to_dict(), cls=CustomJSONEncoder)
+
                         visualizations.append({
                             'title': f'{col1} vs {col2}',
                             'type': 'scatter_regression',
@@ -822,7 +826,8 @@ def generate_visualizations(df):
             fig.update_layout(**base_layout)
             
             try:
-                fig_json = json.dumps(fig.to_dict())
+                json.dumps(fig.to_dict(), cls=CustomJSONEncoder)
+
                 visualizations.append({
                     'title': 'Missing Values',
                     'type': 'missing_values',
