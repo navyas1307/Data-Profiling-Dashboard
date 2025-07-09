@@ -351,21 +351,35 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Display correlations
+    // Display correlations
     function displayCorrelations(correlations) {
+        const heatmapContainer = document.getElementById('correlation-heatmap');
+        const tableContainer = document.getElementById('top-correlations-table');
+        
+        // Validate DOM elements exist
+        if (!heatmapContainer || !tableContainer) {
+            console.error('Correlation containers not found in DOM');
+            return;
+        }
+        
         // Check if correlations data is available
         if (correlations.message) {
-            document.getElementById('correlation-heatmap').innerHTML = `
+            heatmapContainer.innerHTML = `
                 <div class="alert alert-info">
                     <i class="fas fa-info-circle me-2"></i>
                     ${correlations.message}
                 </div>
             `;
-            document.getElementById('top-correlations-table').innerHTML = `
-                <tr><td colspan="3" class="text-center">Not enough numerical data for correlation analysis</td></tr>
-            `;
+            const tbody = tableContainer.querySelector('tbody');
+            if (tbody) {
+                tbody.innerHTML = `
+                    <tr><td colspan="3" class="text-center">Not enough numerical data for correlation analysis</td></tr>
+                `;
+            }
             return;
         }
         
+        // Display correlation heatmap
         // Display correlation heatmap
         if (correlations.heatmap_plotly) {
             try {
@@ -377,8 +391,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             } catch (error) {
                 document.getElementById('correlation-heatmap').innerHTML = `
-                <div class="alert alert-danger">Error rendering correlation heatmap: ${error.message}</div>`;
-             }
+                    <div class="alert alert-danger">Error rendering correlation heatmap: ${error.message}</div>
+                `;
+            }
         }
             
         
@@ -619,6 +634,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Display cluster analysis
     function displayClusters(clusterData) {
         const container = document.getElementById('cluster-analysis-container');
+        
+        // Validate DOM element exists
+        if (!container) {
+            console.error('Cluster analysis container not found in DOM');
+            return;
+        }
+        
         container.innerHTML = '';
     
         // Handle error cases first
@@ -631,6 +653,7 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
             return;
         }
+    
     
         if (clusterData.message) {
             container.innerHTML = `
@@ -698,18 +721,29 @@ document.addEventListener('DOMContentLoaded', function() {
         if (clusterData.cluster_visualization_plotly) {
             try {
                 const figure = JSON.parse(clusterData.cluster_visualization_plotly);
+                const vizContainer = document.getElementById('cluster-viz');
+                
+                if (!vizContainer) {
+                    console.error('Cluster visualization container not found');
+                    return;
+                }
+                
                 Plotly.newPlot('cluster-viz', figure.data, figure.layout, {
                     responsive: true,
                     displayModeBar: true,
                     scrollZoom: true
                 });
             } catch (error) {
-                document.getElementById('cluster-viz').innerHTML = `
-                    <div class="alert alert-danger">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        Error rendering cluster visualization: ${error.message}
-                    </div>
-                `;
+                console.error('Cluster visualization error:', error);
+                const vizContainer = document.getElementById('cluster-viz');
+                if (vizContainer) {
+                    vizContainer.innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Error rendering cluster visualization: ${error.message}
+                        </div>
+                    `;
+                }
             }
         }
     
