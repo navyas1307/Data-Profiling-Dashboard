@@ -191,6 +191,28 @@ def get_data():
     except Exception as e:
         return jsonify({'error': str(e)})
 
+@app.route('/debug_data', methods=['GET'])
+def debug_data():
+    if 'current_file_path' not in session:
+        return jsonify({'error': 'No file uploaded'})
+    
+    file_path = session['current_file_path']
+    df = pd.read_parquet(file_path)
+    
+    # Run the debug function
+    debug_data_analysis(df)
+    
+    # Test correlation analysis
+    corr_result = analyze_correlations(df)
+    
+    # Test clustering analysis  
+    cluster_result = perform_clustering(df)
+    
+    return jsonify({
+        'correlation_result': corr_result,
+        'clustering_result': cluster_result
+    })
+
 def analyze_data(df):
     """Main analysis function"""
     result = {
@@ -326,51 +348,116 @@ def detect_outliers(df):
     return outliers
 
 def analyze_correlations(df):
-    """Correlation analysis with Plotly"""
+    """Fixed correlation analysis with proper error handling"""
     numeric_df = df.select_dtypes(include=[np.number])
     if numeric_df.empty or numeric_df.shape[1] < 2:
         return {'message': 'Not enough numeric columns for correlation analysis'}
     
-    corr_matrix = numeric_df.corr().round(3)
-    
-    corr_pairs = []
-    for i in range(len(corr_matrix.columns)):
-        for j in range(i+1, len(corr_matrix.columns)):
-            col1 = corr_matrix.columns[i]
-            col2 = corr_matrix.columns[j]
-            corr = corr_matrix.iloc[i, j]
-            if not np.isnan(corr):
-                corr_pairs.append({
-                    'column1': col1,
-                    'column2': col2,
-                    'correlation': float(corr)
-                })
-    
-    corr_pairs.sort(key=lambda x: abs(x['correlation']), reverse=True)
-    
-    # Fix: Added closing parenthesis for Heatmap and Figure
-    fig = go.Figure(data=go.Heatmap(
-        z=corr_matrix.values,
-        x=corr_matrix.columns,
-        y=corr_matrix.index,
-        colorscale='Blues',
-        zmin=-1, zmax=1,
-        text=np.round(corr_matrix.values, 2),
-        texttemplate='%{text}',
-        colorbar=dict(title='Correlation')
-    ))
-    
-    fig.update_layout(
-        title='Correlation Heatmap',
-        height=450,
-        width=600,
-        margin=dict(l=50, r=50, t=50, b=50)
-    )
-    
-    return {
-        'pairs': corr_pairs[:10],
-        'heatmap_plotly': json.dumps(fig.to_dict(), cls=CustomJSONEncoder)
-    }
+    try:
+        # Remove any infinite values and fill NaN with median
+        numeric_df = numeric_df.replace([np.inf, -np.inf], np.nan)
+        numeric_df = numeric_df.fillna(numeric_df.median())
+        
+        # Calculate correlation matrix
+        corr_matrix = numeric_df.corr()
+        
+        # Check if correlation matrix is valid
+        if corr_matrix.isna().all().all():
+            return {'message': 'Unable to calculate correlations - insufficient numeric data'}
+        
+        # Round correlation values
+        corr_matrix = corr_matrix.round(3)
+        
+        # Extract correlation pairs
+        corr_pairs = []
+        for i in range(len(corr_matrix.columns)):
+            for j in range(i+1, len(corr_matrix.columns)):
+                col1 = corr_matrix.columns[i]
+                col2 = corr_matrix.columns[j]
+                corr = corr_matrix.iloc[i, j]
+                if not np.isnan(corr):
+                    corr_pairs.append({
+                        'column1': col1,
+                        'column2': col2,
+                        'correlation': float(corr)
+                    })
+        
+        corr_pairs.sort(key=lambda x: abs(x['correlation']), reverse=True)
+        
+        # Create heatmap with proper error handling
+        try:
+            # Convert correlation matrix to list format for JSON serialization
+            z_values = []
+            for i in range(len(corr_matrix.index)):
+                row = []
+                for j in range(len(corr_matrix.columns)):
+                    val = corr_matrix.iloc[i, j]
+                    row.append(float(val) if not np.isnan(val) else 0.0)
+                z_values.append(row)
+            
+            # Create text annotations
+            text_values = []
+            for i in range(len(corr_matrix.index)):
+                row = []
+                for j in range(len(corr_matrix.columns)):
+                    val = corr_matrix.iloc[i, j]
+                    if np.isnan(val):
+                        row.append('')
+                    else:
+                        row.append(f'{val:.2f}')
+                text_values.append(row)
+            
+            fig = go.Figure(data=go.Heatmap(
+                z=z_values,
+                x=corr_matrix.columns.tolist(),
+                y=corr_matrix.index.tolist(),
+                colorscale='RdBu',  # Changed from 'Blues' to 'RdBu' for better contrast
+                zmin=-1, 
+                zmax=1,
+                text=text_values,
+                texttemplate='%{text}',
+                textfont={"size": 10},
+                colorbar=dict(title='Correlation Coefficient'),
+                hoverongaps=False
+            ))
+            
+            fig.update_layout(
+                title={
+                    'text': 'Correlation Heatmap',
+                    'x': 0.5,
+                    'xanchor': 'center'
+                },
+                height=max(400, len(corr_matrix.columns) * 40),
+                width=max(500, len(corr_matrix.columns) * 40),
+                margin=dict(l=100, r=50, t=80, b=100),
+                xaxis=dict(
+                    tickangle=45,
+                    side='bottom'
+                ),
+                yaxis=dict(
+                    tickangle=0
+                ),
+                template='plotly_white'
+            )
+            
+            heatmap_json = json.dumps(fig.to_dict(), cls=CustomJSONEncoder)
+            
+            return {
+                'pairs': corr_pairs[:10],
+                'heatmap_plotly': heatmap_json
+            }
+            
+        except Exception as e:
+            print(f"Error creating heatmap: {str(e)}")
+            return {
+                'pairs': corr_pairs[:10],
+                'error': f'Could not create heatmap: {str(e)}'
+            }
+            
+    except Exception as e:
+        print(f"Error in correlation analysis: {str(e)}")
+        return {'error': f'Correlation analysis failed: {str(e)}'}
+
 
 def generate_visualizations(df):
     """Generate simplified Plotly visualizations with clean layout and improved readability"""
@@ -857,113 +944,275 @@ def generate_visualizations(df):
     
     return visualizations
 def perform_clustering(df):
-    """Clustering analysis with Plotly"""
+    """Fixed clustering analysis with better error handling"""
     numeric_df = df.select_dtypes(include=[np.number])
     
-    if len(numeric_df.columns) < 2 or len(numeric_df) < 20:
-        return {'message': 'Not enough numerical data for clustering'}
+    if len(numeric_df.columns) < 2:
+        return {'message': 'Need at least 2 numeric columns for clustering'}
     
-    numeric_df = numeric_df.fillna(numeric_df.median())
-    scaler = StandardScaler()
-    scaled_data = scaler.fit_transform(numeric_df)
+    if len(numeric_df) < 10:
+        return {'message': 'Need at least 10 rows for reliable clustering'}
     
-    result = {}
-    
-    # Elbow method
-    inertia = []
-    k_range = range(2, min(10, len(numeric_df) // 5 + 1))
-    
-    for k in k_range:
-        kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
-        kmeans.fit(scaled_data)
-        inertia.append(kmeans.inertia_)
-    
-    fig = go.Figure(data=go.Scatter(
-        x=list(k_range), 
-        y=inertia, 
-        mode='lines+markers',
-        marker=dict(color=BLUE_PALETTE['primary'], size=8),
-        line=dict(color=BLUE_PALETTE['primary'], width=2)
-    ))
-    
-    fig.update_layout(
-        title='Elbow Method for Optimal k',
-        height=350,
-        width=500,
-        template='plotly_white',
-        margin=dict(l=40, r=40, t=50, b=40)
-    )
-    
-    result['elbow_curve_plotly'] = json.dumps(fig.to_dict(), cls=CustomJSONEncoder)
-    
-    # Optimal clusters detection
-    from scipy.signal import argrelextrema
-    n_clusters = 3
-    
-    if len(inertia) > 3:
-        diffs = np.diff(inertia)
-        second_diffs = np.diff(diffs)
+    try:
+        # Clean the data
+        numeric_df = numeric_df.replace([np.inf, -np.inf], np.nan)
+        numeric_df = numeric_df.fillna(numeric_df.median())
         
-        if len(second_diffs) > 1:
-            inflection_points = argrelextrema(np.array(second_diffs), np.less)[0]
-            if inflection_points.size > 0:
-                n_clusters = k_range[inflection_points[0] + 2]
-    
-    # KMeans clustering
-    kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
-    clusters = kmeans.fit_predict(scaled_data)
-    
-    # PCA visualization
-    if len(numeric_df.columns) > 2:
-        pca = PCA(n_components=2)
-        pca_result = pca.fit_transform(scaled_data)
+        # Remove columns with zero variance
+        numeric_df = numeric_df.loc[:, numeric_df.var() > 0]
         
-        cluster_df_pca = pd.DataFrame({
-            'PCA1': pca_result[:, 0],
-            'PCA2': pca_result[:, 1],
-            'Cluster': clusters
-        })
+        if len(numeric_df.columns) < 2:
+            return {'message': 'Not enough columns with variance for clustering'}
         
-        fig = px.scatter(
-            cluster_df_pca, 
-            x='PCA1', 
-            y='PCA2', 
-            color='Cluster',
-            color_continuous_scale='Blues',
-            title=f'Cluster Visualization using PCA (K={n_clusters})'
-        )
+        # Scale the data
+        scaler = StandardScaler()
+        scaled_data = scaler.fit_transform(numeric_df)
         
-        fig.update_layout(
-            height=450,
-            width=600,
-            template='plotly_white',
-            margin=dict(l=50, r=50, t=50, b=50)
-        )
+        # Check for NaN values after scaling
+        if np.isnan(scaled_data).any():
+            return {'message': 'Data contains NaN values after scaling'}
         
-        result['cluster_visualization_plotly'] = json.dumps(fig.to_dict(), cls=CustomJSONEncoder)
-        result['pca_variance'] = {
-            'pc1': float(pca.explained_variance_ratio_[0]),
-            'pc2': float(pca.explained_variance_ratio_[1])
-        }
-    
-    # Cluster statistics
-    cluster_df = numeric_df.copy()
-    cluster_df['cluster'] = clusters
-    
-    cluster_stats = {}
-    for i in range(n_clusters):
-        cluster_data = cluster_df[cluster_df['cluster'] == i].drop('cluster', axis=1)
-        cluster_stats[f'Cluster_{i}'] = {
-            'size': int(len(cluster_data)),
-            'percentage': float(round(len(cluster_data) / len(cluster_df) * 100, 2)),
-            'mean': {k: float(v) for k, v in cluster_data.mean().items()}
-        }
-    
-    result['optimal_clusters'] = n_clusters
-    result['cluster_stats'] = cluster_stats
-    
-    return result
+        result = {}
+        
+        # Determine optimal number of clusters (limit to reasonable range)
+        max_clusters = min(10, len(numeric_df) // 5, len(numeric_df.columns) + 2)
+        k_range = range(2, max_clusters + 1)
+        
+        if len(k_range) < 2:
+            return {'message': 'Not enough data points for clustering analysis'}
+        
+        # Elbow method
+        inertia = []
+        silhouette_scores = []
+        
+        for k in k_range:
+            try:
+                kmeans = KMeans(n_clusters=k, random_state=42, n_init=10, max_iter=300)
+                cluster_labels = kmeans.fit_predict(scaled_data)
+                inertia.append(float(kmeans.inertia_))
+                
+                # Calculate silhouette score
+                from sklearn.metrics import silhouette_score
+                if len(set(cluster_labels)) > 1:  # Need at least 2 clusters for silhouette
+                    sil_score = silhouette_score(scaled_data, cluster_labels)
+                    silhouette_scores.append(float(sil_score))
+                else:
+                    silhouette_scores.append(0.0)
+                    
+            except Exception as e:
+                print(f"Error in clustering with k={k}: {str(e)}")
+                continue
+        
+        if not inertia:
+            return {'message': 'Failed to perform clustering analysis'}
+        
+        # Create elbow curve
+        try:
+            fig = go.Figure()
+            
+            fig.add_trace(go.Scatter(
+                x=list(k_range)[:len(inertia)], 
+                y=inertia, 
+                mode='lines+markers',
+                marker=dict(color='#4285F4', size=8),
+                line=dict(color='#4285F4', width=2),
+                name='Inertia'
+            ))
+            
+            fig.update_layout(
+                title={
+                    'text': 'Elbow Method for Optimal Clusters',
+                    'x': 0.5,
+                    'xanchor': 'center'
+                },
+                xaxis_title='Number of Clusters (k)',
+                yaxis_title='Inertia',
+                height=400,
+                width=600,
+                template='plotly_white',
+                margin=dict(l=60, r=60, t=80, b=60),
+                showlegend=False
+            )
+            
+            result['elbow_curve_plotly'] = json.dumps(fig.to_dict(), cls=CustomJSONEncoder)
+            
+        except Exception as e:
+            print(f"Error creating elbow curve: {str(e)}")
+            result['elbow_error'] = str(e)
+        
+        # Find optimal number of clusters
+        optimal_k = 3  # Default
+        if len(silhouette_scores) > 0:
+            optimal_k = k_range[np.argmax(silhouette_scores)]
+        elif len(inertia) >= 3:
+            # Simple elbow detection
+            diffs = np.diff(inertia)
+            if len(diffs) > 1:
+                second_diffs = np.diff(diffs)
+                if len(second_diffs) > 0:
+                    # Find the point where the rate of decrease slows down most
+                    elbow_idx = np.argmax(second_diffs) + 2
+                    if elbow_idx < len(k_range):
+                        optimal_k = k_range[elbow_idx]
+        
+        result['optimal_clusters'] = int(optimal_k)
+        
+        # Perform final clustering with optimal k
+        try:
+            kmeans = KMeans(n_clusters=optimal_k, random_state=42, n_init=10)
+            clusters = kmeans.fit_predict(scaled_data)
+            
+            # PCA for visualization
+            if len(numeric_df.columns) >= 2:
+                pca = PCA(n_components=2)
+                pca_result = pca.fit_transform(scaled_data)
+                
+                # Create cluster visualization
+                fig = go.Figure()
+                
+                # Color palette for clusters
+                colors = ['#4285F4', '#EA4335', '#34A853', '#FBBC04', '#9C27B0', 
+                         '#FF9800', '#795548', '#607D8B', '#E91E63', '#009688']
+                
+                for i in range(optimal_k):
+                    cluster_mask = clusters == i
+                    cluster_points = pca_result[cluster_mask]
+                    
+                    if len(cluster_points) > 0:
+                        fig.add_trace(go.Scatter(
+                            x=cluster_points[:, 0],
+                            y=cluster_points[:, 1],
+                            mode='markers',
+                            marker=dict(
+                                color=colors[i % len(colors)],
+                                size=8,
+                                opacity=0.7
+                            ),
+                            name=f'Cluster {i+1}',
+                            hovertemplate=f'Cluster {i+1}<br>PC1: %{{x:.2f}}<br>PC2: %{{y:.2f}}<extra></extra>'
+                        ))
+                
+                # Add cluster centers
+                centers_pca = pca.transform(scaler.transform(
+                    pd.DataFrame(kmeans.cluster_centers_, columns=numeric_df.columns)
+                ))
+                
+                fig.add_trace(go.Scatter(
+                    x=centers_pca[:, 0],
+                    y=centers_pca[:, 1],
+                    mode='markers',
+                    marker=dict(
+                        color='black',
+                        size=12,
+                        symbol='x',
+                        line=dict(width=2, color='white')
+                    ),
+                    name='Centroids',
+                    hovertemplate='Centroid<br>PC1: %{x:.2f}<br>PC2: %{y:.2f}<extra></extra>'
+                ))
+                
+                fig.update_layout(
+                    title={
+                        'text': f'Cluster Analysis (k={optimal_k})',
+                        'x': 0.5,
+                        'xanchor': 'center'
+                    },
+                    xaxis_title=f'PC1 ({pca.explained_variance_ratio_[0]:.1%} variance)',
+                    yaxis_title=f'PC2 ({pca.explained_variance_ratio_[1]:.1%} variance)',
+                    height=500,
+                    width=700,
+                    template='plotly_white',
+                    margin=dict(l=60, r=60, t=80, b=60),
+                    legend=dict(
+                        yanchor="top",
+                        y=0.99,
+                        xanchor="left",
+                        x=0.01,
+                        bgcolor="rgba(255,255,255,0.8)"
+                    )
+                )
+                
+                result['cluster_visualization_plotly'] = json.dumps(fig.to_dict(), cls=CustomJSONEncoder)
+                result['pca_variance'] = {
+                    'pc1': float(pca.explained_variance_ratio_[0]),
+                    'pc2': float(pca.explained_variance_ratio_[1]),
+                    'total': float(pca.explained_variance_ratio_[0] + pca.explained_variance_ratio_[1])
+                }
+                
+        except Exception as e:
+            print(f"Error in final clustering: {str(e)}")
+            result['clustering_error'] = str(e)
+        
+        # Cluster statistics
+        try:
+            cluster_df = numeric_df.copy()
+            cluster_df['cluster'] = clusters
+            
+            cluster_stats = {}
+            for i in range(optimal_k):
+                cluster_data = cluster_df[cluster_df['cluster'] == i].drop('cluster', axis=1)
+                if len(cluster_data) > 0:
+                    cluster_stats[f'Cluster_{i+1}'] = {
+                        'size': int(len(cluster_data)),
+                        'percentage': float(round(len(cluster_data) / len(cluster_df) * 100, 2)),
+                        'mean': {k: float(v) for k, v in cluster_data.mean().items()}
+                    }
+            
+            result['cluster_stats'] = cluster_stats
+            
+        except Exception as e:
+            print(f"Error calculating cluster stats: {str(e)}")
+            result['stats_error'] = str(e)
+        
+        return result
+        
+    except Exception as e:
+        print(f"Error in clustering analysis: {str(e)}")
+        return {'error': f'Clustering analysis failed: {str(e)}'}
 
+
+# Additional debugging function to test your data
+def debug_data_analysis(df):
+    """Debug function to check data quality for correlation and clustering"""
+    print("=== DATA DEBUGGING ===")
+    print(f"Dataset shape: {df.shape}")
+    
+    # Check numeric columns
+    numeric_df = df.select_dtypes(include=[np.number])
+    print(f"Numeric columns: {len(numeric_df.columns)}")
+    print(f"Numeric columns list: {numeric_df.columns.tolist()}")
+    
+    # Check for infinite values
+    inf_counts = np.isinf(numeric_df).sum()
+    print(f"Infinite values per column: {inf_counts[inf_counts > 0].to_dict()}")
+    
+    # Check for NaN values
+    nan_counts = numeric_df.isna().sum()
+    print(f"NaN values per column: {nan_counts[nan_counts > 0].to_dict()}")
+    
+    # Check variance
+    variances = numeric_df.var()
+    print(f"Zero variance columns: {variances[variances == 0].index.tolist()}")
+    
+    # Test correlation calculation
+    try:
+        corr_matrix = numeric_df.corr()
+        print(f"Correlation matrix shape: {corr_matrix.shape}")
+        print(f"Correlation matrix has NaN: {corr_matrix.isna().any().any()}")
+    except Exception as e:
+        print(f"Error calculating correlation: {str(e)}")
+    
+    # Test clustering data preparation
+    try:
+        cleaned_df = numeric_df.replace([np.inf, -np.inf], np.nan)
+        cleaned_df = cleaned_df.fillna(cleaned_df.median())
+        scaler = StandardScaler()
+        scaled_data = scaler.fit_transform(cleaned_df)
+        print(f"Scaled data shape: {scaled_data.shape}")
+        print(f"Scaled data has NaN: {np.isnan(scaled_data).any()}")
+    except Exception as e:
+        print(f"Error preparing clustering data: {str(e)}")
+        
 def generate_insights(df):
     """Generate automated insights"""
     insights = []
