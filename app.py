@@ -559,7 +559,8 @@ def generate_visualizations(df):
                 )
                 
                 try:
-                    json.dumps(fig.to_dict(), cls=CustomJSONEncoder)
+                    fig_json = json.dumps(fig.to_dict(), cls=CustomJSONEncoder)
+
 
                     visualizations.append({
                         'title': f'Distribution of {col}',
@@ -614,7 +615,8 @@ def generate_visualizations(df):
                 fig.update_layout(**base_layout)
                 
                 try:
-                    json.dumps(fig.to_dict(), cls=CustomJSONEncoder)
+                    fig_json = json.dumps(fig.to_dict(), cls=CustomJSONEncoder)
+
 
                     visualizations.append({
                         'title': f'Distribution of {col}',
@@ -663,7 +665,8 @@ def generate_visualizations(df):
                 fig.update_layout(**base_layout)
                 
                 try:
-                    json.dumps(fig.to_dict(), cls=CustomJSONEncoder)
+                    fig_json = json.dumps(fig.to_dict(), cls=CustomJSONEncoder)
+
 
                     visualizations.append({
                         'title': f'Top Values in {col}',
@@ -759,7 +762,8 @@ def generate_visualizations(df):
                     fig.update_layout(**base_layout)
                     
                     try:
-                        json.dumps(fig.to_dict(), cls=CustomJSONEncoder)
+                        fig_json = json.dumps(fig.to_dict(), cls=CustomJSONEncoder)
+
 
                         visualizations.append({
                             'title': f'{col1} vs {col2}',
@@ -826,7 +830,8 @@ def generate_visualizations(df):
             fig.update_layout(**base_layout)
             
             try:
-                json.dumps(fig.to_dict(), cls=CustomJSONEncoder)
+                fig_json = json.dumps(fig.to_dict(), cls=CustomJSONEncoder)
+
 
                 visualizations.append({
                     'title': 'Missing Values',
