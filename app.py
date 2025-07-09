@@ -199,7 +199,8 @@ def analyze_data(df):
         'correlations': analyze_correlations(df),
         'visualizations': generate_visualizations(df),
         'insights': generate_insights(df),
-        'cluster_analysis': perform_clustering(df) if len(df) > 10 else None
+        'cluster_analysis': perform_clustering(df) if len(df) > 10 else {'message': 'Not enough data for clustering analysis'}
+
     }
     return result
 
