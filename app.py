@@ -217,8 +217,8 @@ def generate_data_profile(df):
             'categorical': len(categorical_columns),
             'datetime': len(datetime_columns)
         },
-        'missing_values': df.isna().sum().to_dict(),
-        'duplicate_rows': df.duplicated().sum(),
+        'missing_values': {k: int(v) for k, v in df.isna().sum().items()},
+        'duplicate_rows': int(df.duplicated().sum()),
         'memory_usage': df.memory_usage(deep=True).sum() / (1024 * 1024)
     }
     
@@ -239,7 +239,7 @@ def generate_data_profile(df):
         else:
             col_stats.update({
                 'unique_values': int(df[col].nunique()),
-                'top_values': {str(k): v for k, v in df[col].value_counts().head(5).to_dict().items()},
+                'top_values': {str(k): int(v) for k, v in df[col].value_counts().head(5).to_dict().items()},
                 'missing_rate': float(df[col].isna().mean())
             })
             
@@ -792,7 +792,7 @@ def generate_visualizations(df):
     
     try:
         # Calculate missing values percentage
-        missing_data = df.isnull().sum().sort_values(ascending=False)
+        missing_data = df.isnull().sum().astype(int).sort_values(ascending=False)
         missing_percent = (missing_data / len(df) * 100).round(1)
         
         # Filter to include only columns with missing values
@@ -1030,7 +1030,7 @@ def generate_insights(df):
                 'message': f"'{col}' has high cardinality ({unique_count} unique values). Consider grouping or encoding."})
     
     # Duplicates
-    dup_count = df.duplicated().sum()
+    dup_count = int(df.duplicated().sum())
     if dup_count > 0:
         insights.append({
             'type': 'warning',
