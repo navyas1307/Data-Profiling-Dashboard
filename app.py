@@ -368,7 +368,7 @@ def analyze_correlations(df):
     
     return {
         'pairs': corr_pairs[:10],
-        'heatmap_plotly': fig.to_json()
+        'heatmap_plotly': json.dumps(fig.to_dict(), cls=CustomJSONEncoder)
     }
 
 def generate_visualizations(df):
@@ -893,7 +893,7 @@ def perform_clustering(df):
         margin=dict(l=40, r=40, t=50, b=40)
     )
     
-    result['elbow_curve_plotly'] = fig.to_json()
+    result['elbow_curve_plotly'] = json.dumps(fig.to_dict(), cls=CustomJSONEncoder)
     
     # Optimal clusters detection
     from scipy.signal import argrelextrema
@@ -939,7 +939,7 @@ def perform_clustering(df):
             margin=dict(l=50, r=50, t=50, b=50)
         )
         
-        result['cluster_visualization_plotly'] = fig.to_json()
+        result['cluster_visualization_plotly'] = json.dumps(fig.to_dict(), cls=CustomJSONEncoder)
         result['pca_variance'] = {
             'pc1': float(pca.explained_variance_ratio_[0]),
             'pc2': float(pca.explained_variance_ratio_[1])
