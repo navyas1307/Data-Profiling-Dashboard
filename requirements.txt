@@ -1,10 +1,12 @@
 Flask
 gunicorn
-scikit-learn
 pandas
 numpy
 matplotlib
 seaborn
-chardet
+scikit-learn
+scipy
+statsmodels
 plotly
-
+chardet
+openpyxl     
