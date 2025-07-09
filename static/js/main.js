@@ -367,11 +367,20 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Display correlation heatmap
-        if (correlations.heatmap) {
-            document.getElementById('correlation-heatmap').innerHTML = `
-                <img src="data:image/png;base64,${correlations.heatmap}" class="img-fluid" alt="Correlation Heatmap">
-            `;
+        if (correlations.heatmap_plotly) {
+            try {
+                const figure = JSON.parse(correlations.heatmap_plotly);
+                Plotly.newPlot('correlation-heatmap', figure.data, figure.layout, {
+                    responsive: true,
+                    displayModeBar: true,
+                    displaylogo: false
+                });
+            } catch (error) {
+                document.getElementById('correlation-heatmap').innerHTML = `
+                <div class="alert alert-danger">Error rendering correlation heatmap: ${error.message}</div>`;
+             }
         }
+            
         
         // Display top correlations table
         const tableBody = document.getElementById('top-correlations-table').querySelector('tbody');
